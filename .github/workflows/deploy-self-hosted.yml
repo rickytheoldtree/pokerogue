@@ -41,12 +41,11 @@ jobs:
           VITE_BYPASS_LOGIN: "1"
           VITE_BYPASS_TUTORIAL: "0"
 
-      - name: Package release
+      - name: Write release metadata
         shell: bash
         run: |
           printf '{"commit":"%s","builtAt":"%s"}\n' \
             "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/release.json
-          tar -C dist -czf "pokerogue-${GITHUB_SHA}.tar.gz" .
 
       - name: Configure SSH
         shell: bash
@@ -71,11 +70,14 @@ jobs:
           test -n "$DEPLOY_USER"
           target="${DEPLOY_USER}@${DEPLOY_HOST}"
           ssh_args=(-i ~/.ssh/pokerogue_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          remote_release="${DEPLOY_ROOT}/incoming/release-${GITHUB_SHA}"
           ssh "${ssh_args[@]}" "$target" \
-            "mkdir -p '${DEPLOY_ROOT}/incoming' '${DEPLOY_ROOT}/shared'"
-          scp "${ssh_args[@]}" "pokerogue-${GITHUB_SHA}.tar.gz" \
-            "$target:${DEPLOY_ROOT}/incoming/${GITHUB_SHA}.tar.gz"
+            "mkdir -p '${remote_release}' '${DEPLOY_ROOT}/shared'"
+          export RSYNC_RSH="ssh -i ~/.ssh/pokerogue_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes"
+          rsync -azc --delete --delay-updates \
+            --link-dest="${DEPLOY_ROOT}/current/" \
+            dist/ "$target:${remote_release}/"
           scp "${ssh_args[@]}" ops/pokerogue/deploy-release.sh \
             "$target:${DEPLOY_ROOT}/shared/deploy-release.sh"
           ssh "${ssh_args[@]}" "$target" \
-            "chmod 755 '${DEPLOY_ROOT}/shared/deploy-release.sh' && '${DEPLOY_ROOT}/shared/deploy-release.sh' '${GITHUB_SHA}' '${DEPLOY_ROOT}/incoming/${GITHUB_SHA}.tar.gz'"
+            "chmod 755 '${DEPLOY_ROOT}/shared/deploy-release.sh' && '${DEPLOY_ROOT}/shared/deploy-release.sh' '${GITHUB_SHA}' '${remote_release}'"

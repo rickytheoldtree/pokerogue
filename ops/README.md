@@ -18,6 +18,11 @@ This directory contains the server-side configuration used by the
 - `pokerogue-web` serves the site on `127.0.0.1:8088` for the public reverse
   proxy. It is not directly exposed to the internet.
 
+After the first release, rsync compares file checksums against `current` and
+hard-links unchanged files into the new release. Each deployment remains an
+independent snapshot without repeatedly transferring or storing unchanged game
+assets.
+
 The workflow builds in guest mode and deploys through the unprivileged
 `pokerogue-deploy` account. GitHub Actions requires these repository secrets:
 

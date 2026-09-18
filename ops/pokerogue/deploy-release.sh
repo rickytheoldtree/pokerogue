@@ -12,7 +12,7 @@ readonly INCOMING="$ROOT/incoming"
 readonly KEEP_RELEASES=5
 
 sha="${1:-}"
-archive="${2:-}"
+source_path="${2:-}"
 
 if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
   echo "Invalid commit SHA: $sha" >&2
@@ -20,8 +20,9 @@ if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 
 expected_archive="$INCOMING/$sha.tar.gz"
-if [[ "$archive" != "$expected_archive" ]]; then
-  echo "Unexpected archive path: $archive" >&2
+expected_directory="$INCOMING/release-$sha"
+if [[ "$source_path" != "$expected_archive" ]] && [[ "$source_path" != "$expected_directory" ]]; then
+  echo "Unexpected release source: $source_path" >&2
   exit 2
 fi
 
@@ -43,19 +44,28 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ ! -d "$release" ]]; then
-  [[ -f "$archive" ]] || {
-    echo "Release archive not found: $archive" >&2
-    exit 4
-  }
+  if [[ "$source_path" == "$expected_directory" ]]; then
+    [[ -d "$source_path" ]] || {
+      echo "Release directory not found: $source_path" >&2
+      exit 4
+    }
+    staging="$source_path"
+  else
+    [[ -f "$source_path" ]] || {
+      echo "Release archive not found: $source_path" >&2
+      exit 4
+    }
 
-  tar -tzf "$archive" > "$archive_listing"
-  if grep -Eq '(^/|(^|/)\.\.(/|$))' "$archive_listing"; then
-    echo "Unsafe path found in release archive" >&2
-    exit 5
+    tar -tzf "$source_path" > "$archive_listing"
+    if grep -Eq '(^/|(^|/)\.\.(/|$))' "$archive_listing"; then
+      echo "Unsafe path found in release archive" >&2
+      exit 5
+    fi
+
+    mkdir -p "$staging"
+    tar -xzf "$source_path" -C "$staging"
   fi
 
-  mkdir -p "$staging"
-  tar -xzf "$archive" -C "$staging"
   [[ -f "$staging/index.html" ]] || {
     echo "Release is missing index.html" >&2
     exit 6
@@ -66,6 +76,8 @@ if [[ ! -d "$release" ]]; then
   }
   chmod -R u=rwX,go=rX "$staging"
   mv "$staging" "$release"
+elif [[ "$source_path" == "$expected_directory" ]]; then
+  rm -rf -- "$source_path"
 fi
 
 current_target="$(readlink "$ROOT/current" 2>/dev/null || true)"
@@ -78,7 +90,7 @@ fi
 current_tmp="$ROOT/.current-$sha-$$"
 ln -s "releases/$sha" "$current_tmp"
 mv -Tf "$current_tmp" "$ROOT/current"
-rm -f -- "$archive"
+rm -f -- "$expected_archive"
 
 current_sha="$sha"
 previous_target="$(readlink "$ROOT/previous" 2>/dev/null || true)"
