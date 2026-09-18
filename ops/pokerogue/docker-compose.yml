@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 rickytheoldtree
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+
+services:
+  web:
+    image: nginx:stable-alpine
+    container_name: pokerogue-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:8080"
+    volumes:
+      - /srv/pokerogue:/srv/pokerogue:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

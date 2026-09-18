@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: 2026 rickytheoldtree
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+
+name: Deploy Self-Hosted
+
+on:
+  push:
+    branches:
+      - beta
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-self-hosted-production
+  cancel-in-progress: false
+
+env:
+  DEPLOY_ROOT: /srv/pokerogue
+
+jobs:
+  build-and-deploy:
+    if: github.repository == 'rickytheoldtree/pokerogue'
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository and assets
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/setup-deps
+
+      - name: Build guest-mode production site
+        run: pnpm build
+        env:
+          NODE_ENV: production
+          VITE_BYPASS_LOGIN: "1"
+          VITE_BYPASS_TUTORIAL: "0"
+
+      - name: Package release
+        shell: bash
+        run: |
+          printf '{"commit":"%s","builtAt":"%s"}\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/release.json
+          tar -C dist -czf "pokerogue-${GITHUB_SHA}.tar.gz" .
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/pokerogue_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/pokerogue_deploy ~/.ssh/known_hosts
+
+      - name: Upload and activate release
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          target="${DEPLOY_USER}@${DEPLOY_HOST}"
+          ssh_args=(-i ~/.ssh/pokerogue_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          ssh "${ssh_args[@]}" "$target" \
+            "mkdir -p '${DEPLOY_ROOT}/incoming' '${DEPLOY_ROOT}/shared'"
+          scp "${ssh_args[@]}" "pokerogue-${GITHUB_SHA}.tar.gz" \
+            "$target:${DEPLOY_ROOT}/incoming/${GITHUB_SHA}.tar.gz"
+          scp "${ssh_args[@]}" ops/pokerogue/deploy-release.sh \
+            "$target:${DEPLOY_ROOT}/shared/deploy-release.sh"
+          ssh "${ssh_args[@]}" "$target" \
+            "chmod 755 '${DEPLOY_ROOT}/shared/deploy-release.sh' && '${DEPLOY_ROOT}/shared/deploy-release.sh' '${GITHUB_SHA}' '${DEPLOY_ROOT}/incoming/${GITHUB_SHA}.tar.gz'"
