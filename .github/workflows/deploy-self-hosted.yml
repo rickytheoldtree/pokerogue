@@ -74,7 +74,7 @@ jobs:
           ssh "${ssh_args[@]}" "$target" \
             "mkdir -p '${remote_release}' '${DEPLOY_ROOT}/shared'"
           export RSYNC_RSH="ssh -i ~/.ssh/pokerogue_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes"
-          rsync -azc --delete --delay-updates \
+          rsync -azc --no-times --delete --delay-updates \
             --link-dest="${DEPLOY_ROOT}/current/" \
             dist/ "$target:${remote_release}/"
           scp "${ssh_args[@]}" ops/pokerogue/deploy-release.sh \
