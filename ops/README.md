@@ -11,6 +11,7 @@ This directory contains the server-side configuration used by the
 
 ## Runtime layout
 
+- The public guest-mode site is `https://game.r117.fun`.
 - `/srv/pokerogue/releases/<commit-sha>` contains immutable releases.
 - `/srv/pokerogue/current` points to the active release.
 - `/srv/pokerogue/previous` points to the preceding release so that clients
@@ -51,3 +52,7 @@ The host `certbot.timer` is the sole renewal scheduler. Its configured webroot
 container. After a successful renewal,
 `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh` validates and reloads
 the container. Do not add a second Certbot renewal loop to Compose.
+
+The public Nginx container bind-mounts `nginx/nginx.conf` as a single file.
+Update that file in place before running `nginx -t` and reloading. Replacing its
+inode requires recreating the container before it can see the new file.
