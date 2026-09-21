@@ -68,6 +68,10 @@ export abstract class OAuthProvidersUiHandler extends LoginRegisterInfoContainer
   }
 
   protected processExternalProvider(): void {
+    if (!import.meta.env.VITE_DISCORD_CLIENT_ID && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+      return;
+    }
+
     const titleX = 22;
     this.externalPartyTitle
       .setText(i18next.t("menu:orUse"))

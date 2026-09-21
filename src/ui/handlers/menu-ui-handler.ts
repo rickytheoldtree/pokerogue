@@ -581,6 +581,7 @@ export class MenuUiHandler extends OptionSelectUiHandler {
       case MenuOptions.MANAGE_DATA:
         if (
           !bypassLogin
+          && (import.meta.env.VITE_DISCORD_CLIENT_ID || import.meta.env.VITE_GOOGLE_CLIENT_ID)
           && !this.manageDataConfig.options.some(
             o =>
               o.label === i18next.t("menuUiHandler:linkDiscord")

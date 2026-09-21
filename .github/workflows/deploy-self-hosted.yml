@@ -34,12 +34,15 @@ jobs:
 
       - uses: ./.github/actions/setup-deps
 
-      - name: Build guest-mode production site
+      - name: Build account-enabled production site
         run: pnpm build
         env:
           NODE_ENV: production
-          VITE_BYPASS_LOGIN: "1"
+          VITE_BYPASS_LOGIN: "0"
           VITE_BYPASS_TUTORIAL: "0"
+          VITE_SERVER_URL: https://api.r117.fun
+          VITE_DISCORD_CLIENT_ID: ""
+          VITE_GOOGLE_CLIENT_ID: ""
 
       - name: Write release metadata
         shell: bash

@@ -11,7 +11,9 @@ This directory contains the server-side configuration used by the
 
 ## Runtime layout
 
-- The public guest-mode site is `https://game.r117.fun`.
+- The public account-enabled site is `https://game.r117.fun`.
+- The account and save-data API is `https://api.r117.fun`; public Nginx proxies
+  it to the loopback-only backend on `127.0.0.1:8001`.
 - `/srv/pokerogue/releases/<commit-sha>` contains immutable releases.
 - `/srv/pokerogue/current` points to the active release.
 - `/srv/pokerogue/previous` points to the preceding release so that clients
@@ -24,8 +26,11 @@ hard-links unchanged files into the new release. Each deployment remains an
 independent snapshot without repeatedly transferring or storing unchanged game
 assets.
 
-The workflow builds in guest mode and deploys through the unprivileged
-`pokerogue-deploy` account. GitHub Actions requires these repository secrets:
+The workflow builds with username/password accounts enabled and points the
+client at `https://api.r117.fun`. OAuth buttons stay hidden until self-hosted
+Discord or Google client IDs and server secrets are configured. Deployment
+uses the unprivileged `pokerogue-deploy` account. GitHub Actions requires these
+repository secrets:
 
 - `DEPLOY_HOST`
 - `DEPLOY_USER`
