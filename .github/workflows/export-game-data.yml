@@ -14,6 +14,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   export-game-data:
     name: Game Data Exporter
@@ -73,5 +76,5 @@ jobs:
 
       # Have to switch back, so the post actions/setup-deps action doesn't fail due to missing files
       - name: Checkout original branch
-        if: github.event_name == 'push'
+        if: ${{ always() && github.event_name == 'push' }}
         run: git checkout ${{ github.ref_name }}

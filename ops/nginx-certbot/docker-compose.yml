@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 rickytheoldtree
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+
 services:
   nginx:
     image: nginx:stable-alpine
